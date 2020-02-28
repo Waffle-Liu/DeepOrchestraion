@@ -15,7 +15,7 @@ from model import OrchMatchNet
 # from process_TinySOL import show_all_class_num, show_all_instru_num, stat_test_db, decode, N
 from dataset import OrchDataSet
 
-out_num = 3674
+out_num = 505
 time = 4
 N = 5
 
@@ -25,28 +25,30 @@ def get_data():
     features = []
     for x in os.listdir(target_path):
         y, sr = librosa.load(os.path.join(target_path, x), sr=None)
-
-        feature = librosa.feature.melspectrogram(y, sr).T
-
-        if feature.shape[0] <= 256:
-            # add zero
-            zero = np.zeros((256-feature.shape[0], 128), dtype=np.float32)
-            feature = np.vstack((feature, zero))
+        if len(y) > time*sr:
+            n = np.random.randint(0, len(y)-time*sr)
+            y = y[n:n+time*sr]
         else:
-            feature = feature[:256]
-            # feature = feature[:-1*(feature.shape[0] % 128)]
+            z = np.zeros((1, time*sr-len(y)), dtype=np.float32)
+            y = np.append(y, z)
 
-        num_chunk = feature.shape[0]/128
-        feature = np.split(feature, num_chunk)
+        feature = librosa.feature.melspectrogram(y, sr)
+
+        # if feature.shape[1] < 345:
+        #     # add zero
+        #     zero = np.zeros((128, 345-feature.shape[1]), dtype=np.float32)
+        #     feature = np.hstack((feature, zero))
+
+        feature = np.split(feature, 1)
         features.append([torch.tensor([feature]), x])
 
     return features
 
 
 def test():
-    server_model_path = '/home/data/happipub/gradpro_l/model/three'
+    server_model_path = '/home/data/happipub/gradpro_l/model/five'
     state = torch.load(server_model_path+"/epoch_best.pth")
-    model = OrchMatchNet(out_num, 'cnn')
+    model = OrchMatchNet(out_num, 'resnet')
     model.load_state_dict(state['state_dict'])
 
     datas = get_data()
@@ -55,6 +57,7 @@ def test():
     for data, x in datas:
         print('--------------------------')
         print('target: ', x)
+
         out = model(data.float())
         get_pred_file(out)
 
@@ -122,16 +125,21 @@ def get_pred_file(output):
 
     preidx = []
     print("orch:")
-    for i, p in enumerate(output[0]):
-        if p > 0.01:
-            preidx.append(i)
-            orch_file = list(inx.keys())[list(inx.values()).index(i)]
-            print(round(float(p), 3), orch_file)
+    # for i, p in enumerate(output[0]):
+    #     if p > 0.01:
+    #         preidx.append(i)
+    #         orch_file = list(inx.keys())[list(inx.values()).index(i)]
+    #         print(round(float(p), 3), orch_file)
 
-        # for i in range(N):
-        #     idx = output.max(1, keepdim=True)[1]
-        #     preidx.append(idx)
-        #     output[0][idx] = -1
+    for i in range(N):
+        idx = output.max(1, keepdim=True)[1]
+        preidx.append(idx)
+        p = output[0][idx]
+
+        orch_file = list(inx.keys())[list(inx.values()).index(idx)]
+        print(round(float(p), 3), orch_file)
+
+        output[0][idx] = -1
 
 
 if __name__ == "__main__":
