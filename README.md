@@ -10,4 +10,6 @@
 - set paras in `process_Stat.py` 
 - call method `random_combine` to generate new datasets
 
+### Train a network
+Just run `python main.py`. Before training, make sure that the dictionary `db` is right. If it is a new dataset, call method `stat_test_db` in `process_Stat.py` to get the new `db`.
 
