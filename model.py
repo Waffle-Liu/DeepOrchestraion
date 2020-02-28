@@ -4,7 +4,7 @@ import torch.nn.init as init
 import torch.nn.functional as F
 import numpy as np
 import math
-from network_example import resnet, ResNet, count_parameters, init_weights, device, test_tensor
+from resnet import resnet, ResNet, count_parameters, init_weights, device, test_tensor
 
 
 class CNN(nn.Module):
